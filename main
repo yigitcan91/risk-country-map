@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Risk Country Map</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  
+  <style>
+    #map {
+      height: 100vh;
+    }
+    .info {
+      padding: 6px 8px;
+      background: white;
+      background: rgba(255,255,255,0.8);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+    }
+    .info h4 {
+      margin: 0 0 5px;
+      color: #777;
+    }
+    .legend {
+      line-height: 18px;
+      color: #555;
+    }
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script>
+    // Initialize the map
+    var map = L.map('map').setView([20, 0], 2);
+
+    // Add OpenStreetMap tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 6,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Define risk categories and associated countries
+    var riskCategories = {
+      "Embargo": ["Iran", "North Korea", "Syria", "Cuba"],
+      "Severe-Risk": ["Russia", "Belarus"],
+      "Anti-Circumvention": ["Turkey", "Kazakhstan", "Mongolia", "Armenia", "Kyrgyzstan", "Uzbekistan"],
+      "High-Risk": ["China", "India", "Pakistan", "Afghanistan", "Myanmar", "Libya", "Sudan", "Egypt", "Venezuela", "Nigeria"],
+      "Medium-Risk": ["Somalia", "Yemen", "Ethiopia", "Zambia", "South Sudan", "Mali", "DR Congo"]
+    };
+
+    // Define colors for each risk category
+    var riskColors = {
+      "Embargo": "#b40028",
+      "Severe-Risk": "#7209b7",
+      "Anti-Circumvention": "#cc6600",
+      "High-Risk": "#5ba4cf",
+      "Medium-Risk": "#005b4f"
+    };
+
+    // Function to get the risk category of a country
+    function getRiskCategory(countryName) {
+      for (var category in riskCategories) {
+        if (riskCategories[category].includes(countryName)) {
+          return category;
+        }
+      }
+      return null;
+    }
+
+    // Function to get the color based on risk category
+    function getColor(countryName) {
+      var category = getRiskCategory(countryName);
+      return category ? riskColors[category] : "#ccc";
+    }
+
+    // Style function for GeoJSON features
+    function style(feature) {
+      return {
+        fillColor: getColor(feature.properties.ADMIN),
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7
+      };
+    }
+
+    // Highlight feature on hover
+    function highlightFeature(e) {
+      var layer = e.target;
+
+      layer.setStyle({
+        weight: 2,
+        color: '#666',
+        dashArray: '',
+        fillOpacity: 0.9
+      });
+
+      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        layer.bringToFront();
+      }
+
+      info.update(layer.feature.properties.ADMIN);
+    }
+
+    // Reset highlight
+    function resetHighlight(e) {
+      geojson.resetStyle(e.target);
+      info.update();
+    }
+
+    // Zoom to feature on click (optional)
+    function zoomToFeature(e) {
+      map.fitBounds(e.target.getBounds());
+    }
+
+    // Define interactions for each feature
+    function onEachFeature(feature, layer) {
+      layer.on({
+        mouseover: highlightFeature,
+        mouseout: resetHighlight,
+        click: zoomToFeature
+      });
+    }
+
+    // Add info control
+    var info = L.control();
+
+    info.onAdd = function (map) {
+      this._div = L.DomUtil.create('div', 'info');
+      this.update();
+      return this._div;
+    };
+
+    // Update the info control based on feature properties
+    info.update = function (countryName) {
+      var category = getRiskCategory(countryName);
+      this._div.innerHTML = '<h4>Country Risk Group</h4>' +  (countryName ?
+        '<b>' + countryName + '</b><br />' + (category ? category : 'No data') :
+        'Hover over a country');
+    };
+
+    info.addTo(map);
+
+    // Add legend control
+    var legend = L.control({position: 'bottomright'});
+
+    legend.onAdd = function (map) {
+      var div = L.DomUtil.create('div', 'info legend'),
+          categories = Object.keys(riskColors),
+          labels = [];
+
+      for (var i = 0; i < categories.length; i++) {
+        div.innerHTML +=
+          '<i style="background:' + riskColors[categories[i]] + '"></i> ' +
+          categories[i] + '<br>';
+      }
+
+      return div;
+    };
+
+    legend.addTo(map);
+
+    // Load GeoJSON data and add to map
+    var geojson;
+
+    fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+     
+::contentReference[oaicite:14]{index=14}
+ 
