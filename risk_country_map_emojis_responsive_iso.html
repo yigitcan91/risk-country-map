@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Risk Country Map</title>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      font-family: Arial, sans-serif;
+    }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    .legend {
+      background: white;
+      padding: 10px;
+      font-size: 0.85rem;
+      line-height: 1.5em;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      border-radius: 6px;
+    }
+    .legend span {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .leaflet-popup-content {
+      font-size: 0.9rem;
+    }
+  
+    .country-label span {
+      font-size: 0.55rem;
+      font-weight: bold;
+      color: black;
+      text-shadow: 1px 1px 1px white;
+      white-space: nowrap;
+    }
+</style>
+<link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    const riskData = {"\ud83d\udeab Embargoed Countries": {"countries": ["Iran", "North Korea", "Syria", "Cuba", "Crimea", "Donetsk", "Luhansk", "Kherson", "Zaporizhzhia"], "color": "#a7002c", "policy": "<ul><li>No business activity is permitted under any circumstances.</li></ul>"}, "\ud83d\udd34 Severe-Risk Countries": {"countries": ["Russia", "Belarus"], "color": "#651878", "policy": "<ul><li>Strict controls for direct and indirect business flows.</li><li>Buyer verification</li><li>End-user due diligence</li><li>Product-level risk assessment</li><li>Project-level evaluation</li><li>Client\u2019s partner bank verification</li></ul>"}, "\ud83d\udfe0 Anti-Circumvention Countries": {"countries": ["Turkey", "Armenia", "Azerbaijan", "Kazakhstan", "Kyrgyzstan", "Moldova", "Turkmenistan", "Tajikistan", "Uzbekistan", "United Arab Emirates", "Serbia"], "color": "#c45518", "policy": "<ul><li>High alert for unauthorized re-exports to Russia or Belarus</li><li>Update intercompany agreements</li><li>'No Russia/No Belarus' clauses</li><li>Annual training</li><li>Monitor red flags</li></ul>"}, "\ud83d\udfe1 High-Risk Countries": {"countries": ["Sudan", "South Sudan", "Libya", "Myanmar", "Nicaragua", "Venezuela", "Afghanistan"], "color": "#4891c2", "policy": "<ul><li>Enhanced due diligence required</li><li>Partner screening</li><li>Signed End-User Statement</li><li>KYC Questionnaire</li><li>Training</li><li>Monitoring</li></ul>"}, "\ud83d\udfe2 Medium-Risk Countries": {"countries": ["Lebanon", "Iraq", "Yemen", "Zimbabwe", "Democratic Republic of the Congo", "Mali", "Somalia"], "color": "#014e43", "policy": "<ul><li>Moderate controls</li><li>Partner screening</li><li>End-User Statement</li><li>Training</li></ul>"}};
+
+    const map = L.map('map').setView([20, 0], 2);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    function getRiskInfo(countryName) {
+      for (let riskLevel in riskData) {
+        if (riskData[riskLevel].countries.includes(countryName)) {
+          return {
+            group: riskLevel,
+            color: riskData[riskLevel].color,
+            policy: riskData[riskLevel].policy
+          };
+        }
+      }
+      return null;
+    }
+
+    fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: function(feature) {
+            const riskInfo = getRiskInfo(feature.properties.name);
+            return {
+              color: "#000",
+              weight: 1,
+              fillColor: riskInfo ? riskInfo.color : "#ccc",
+              fillOpacity: 0.7
+            };
+          },
+          
+    onEachFeature: function(feature, layer) {
+      const label = feature.properties.iso_a2;
+      const center = layer.getBounds().getCenter();
+      if (label && label !== '-99') {
+        const textMarker = L.marker(center, {
+          icon: L.divIcon({
+            className: 'country-label',
+            html: `<span>${label}</span>`,
+            iconSize: [40, 15]
+          })
+        }).addTo(map);
+      }
+    
+            const riskInfo = getRiskInfo(feature.properties.name);
+            if (riskInfo) {
+              layer.bindPopup(`<strong>${feature.properties.name}</strong><br><strong>${riskInfo.group}</strong>${riskInfo.policy}`);
+              layer.on('mouseover', function() { this.openPopup(); });
+              layer.on('mouseout', function() { this.closePopup(); });
+            }
+          }
+        }).addTo(map);
+      });
+
+    const legend = L.control({ position: "bottomright" });
+    legend.onAdd = function(map) {
+      const div = L.DomUtil.create("div", "legend");
+      div.innerHTML = "<strong>🗺️ Risk Levels</strong><br>";
+      for (let riskLevel in riskData) {
+        div.innerHTML += `<span style="background:${riskData[riskLevel].color}"></span>${riskLevel}<br>`;
+      }
+      return div;
+    };
+    legend.addTo(map);
+  </script>
+</body>
+</html>
